@@ -22,6 +22,7 @@ st.markdown("""
 <ul>
 <li>Upload Legacy Crawl or URLs (xlsx)</li>
 <li>Upload New Crawl or URLs (xlsx)</li>
+<li>Download xlsx file after the app is finished</li>
 </ul>
 <b>Requirements: </b>
 <ul>
