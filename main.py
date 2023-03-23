@@ -5,7 +5,7 @@ from openpyxl import load_workbook
 from polyfuzz import PolyFuzz
 from polyfuzz.models import RapidFuzz
 
-matcher = RapidFuzz(n_jobs=1, score_cutoff=0.9)
+matcher = RapidFuzz(n_jobs=1, score_cutoff=0.8)
 model = PolyFuzz(matcher)
 
 st.markdown("""
@@ -76,6 +76,27 @@ def url_match(legacy_paths, new_paths, legacy_url_parse, new_url_parse):
     return url_df
 
 
+def slug_match(legacy_slugs, new_slugs, legacy_url_parse, new_url_parse):
+    st.write('Analyzing URL Slugs. . .')
+    model.match(legacy_slugs, new_slugs)
+
+    pfuzz_df = model.get_matches()
+    pfuzz_df["Similarity"] = pfuzz_df["Similarity"].round(3)
+    pfuzz_df = pfuzz_df.sort_values('Similarity', ascending=False)
+    pfuzz_df = pfuzz_df[pfuzz_df['Similarity'] >= .800]
+    print(pfuzz_df.head())
+
+    join_df = pd.merge(pfuzz_df, legacy_url_parse, left_on='From', right_on='last_dir')
+    join_df_2 = pd.merge(join_df, new_url_parse, left_on='To', right_on='last_dir')
+    join_df_2.rename(
+        columns={'url_x': 'Legacy URL', 'url_y': 'New URL', 'path_x': 'Legacy URL Path', 'path_y': 'New URL Path'},
+        inplace=True)
+    slug_df = join_df_2[['From', 'To', 'Similarity', 'Legacy URL Path', 'New URL Path', 'Legacy URL', 'New URL']]
+    slug_df = slug_df.drop_duplicates()
+    slug_df.head()
+    st.dataframe(slug_df)
+    return slug_df
+
 def title_match(legacy_titles, new_titles, legacy_crawl, new_crawl):
     st.write('Analyzing Title tags. . .')
     model.match(legacy_titles, new_titles)
@@ -83,7 +104,7 @@ def title_match(legacy_titles, new_titles, legacy_crawl, new_crawl):
     pfuzz_df = model.get_matches()
     pfuzz_df["Similarity"] = pfuzz_df["Similarity"].round(3)
     pfuzz_df = pfuzz_df.sort_values('Similarity', ascending=False)
-    pfuzz_df = pfuzz_df[pfuzz_df['Similarity'] >= .500]
+    pfuzz_df = pfuzz_df[pfuzz_df['Similarity'] >= .900]
     print(pfuzz_df.head())
 
     join_df = pd.merge(pfuzz_df, legacy_crawl, left_on='From', right_on='Title 1')
@@ -103,7 +124,7 @@ def h1_match(legacy_h1, new_h1, legacy_crawl, new_crawl):
     pfuzz_df = model.get_matches()
     pfuzz_df["Similarity"] = pfuzz_df["Similarity"].round(3)
     pfuzz_df = pfuzz_df.sort_values('Similarity', ascending=False)
-    pfuzz_df = pfuzz_df[pfuzz_df['Similarity'] >= .500]
+    pfuzz_df = pfuzz_df[pfuzz_df['Similarity'] >= .900]
     print(pfuzz_df.head())
 
     join_df = pd.merge(pfuzz_df, legacy_crawl, left_on='From', right_on='H1-1')
@@ -122,7 +143,7 @@ def h2_match(legacy_h2, new_h2, legacy_crawl, new_crawl):
     pfuzz_df = model.get_matches()
     pfuzz_df["Similarity"] = pfuzz_df["Similarity"].round(3)
     pfuzz_df = pfuzz_df.sort_values('Similarity', ascending=False)
-    pfuzz_df = pfuzz_df[pfuzz_df['Similarity'] >= .500]
+    pfuzz_df = pfuzz_df[pfuzz_df['Similarity'] >= .900]
     print(pfuzz_df.head())
 
     join_df = pd.merge(pfuzz_df, legacy_crawl, left_on='From', right_on='H2-1')
@@ -155,6 +176,7 @@ def url_parse(legacy_urls, legacy_crawl, new_urls, new_crawl):
     new_h2 = new_crawl['H2-1']
     match_dfs = [
         url_match(legacy_paths, new_paths, legacy_url_parse, new_url_parse),
+        slug_match(legacy_slug, new_slug, legacy_url_parse, new_url_parse),
         title_match(legacy_titles, new_titles, legacy_crawl, new_crawl),
         h1_match(legacy_h1, new_h1, legacy_crawl, new_crawl),
         h2_match(legacy_h2, new_h2, legacy_crawl, new_crawl)
@@ -164,7 +186,7 @@ def url_parse(legacy_urls, legacy_crawl, new_urls, new_crawl):
 
 
 def export_dfs(match_dfs):
-    sheet_names = ['URL Match', 'Title Match', 'H1 Match', 'H2 Match']
+    sheet_names = ['URL Match', 'Slug Match', 'Title Match', 'H1 Match', 'H2 Match']
     with pd.ExcelWriter('mapped_urls.xlsx') as writer:
         for df in enumerate(match_dfs):
             print(df[1])
