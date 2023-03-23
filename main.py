@@ -5,7 +5,7 @@ from openpyxl import load_workbook
 from polyfuzz import PolyFuzz
 from polyfuzz.models import RapidFuzz
 
-matcher = RapidFuzz(n_jobs=1, score_cutoff=0.8)
+matcher = RapidFuzz(n_jobs=1, score_cutoff=0.85)
 model = PolyFuzz(matcher)
 
 st.markdown("""
@@ -18,9 +18,20 @@ st.markdown("""
 
 st.markdown("""
 <p class="big-font">SEO URL Redirect Mapper</p>
-<b>Directions: </b><ul>
+<b>Directions: </b>
+<ul>
 <li>Upload Legacy Crawl or URLs (xlsx)</li>
 <li>Upload New Crawl or URLs (xlsx)</li>
+</ul>
+<b>Requirements: </b>
+<ul>
+<li>Column 1 to be named "Address" and contain full URLs, including http(s)://</li>
+<li>The following column headings need to exist in both files, even if column cells are blank:
+ <ul>
+ <li>"Title-1" "H1-1" "H2-1"</li>
+ </ul>
+
+</ul>
 """, unsafe_allow_html=True)
 
 legacy_file = st.file_uploader('Upload Crawl of LEGACY URLs', type='xlsx', key='legacy')
