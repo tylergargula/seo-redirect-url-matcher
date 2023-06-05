@@ -5,21 +5,9 @@ import streamlit as st
 from openpyxl import load_workbook
 from polyfuzz import PolyFuzz
 from polyfuzz.models import RapidFuzz
-from PIL import Image
-from streamlit_lottie import st_lottie
 
 matcher = RapidFuzz(n_jobs=1, score_cutoff=0.80)
 model = PolyFuzz(matcher)
-
-
-def load_lottieurl(url):
-    r = requests.get(url)
-    if r.status_code != 200:
-        return None
-    return r.json()
-
-
-lottie_coding = load_lottieurl("https://assets3.lottiefiles.com/packages/lf20_jfXcHs2ED8.json")
 
 
 hide_streamlit_style = """
@@ -56,8 +44,8 @@ st.markdown("""
 </ul>
 """, unsafe_allow_html=True)
 
-# legacy_file = st.file_uploader('Upload Crawl of LEGACY URLs', type='xlsx', key='legacy')
-legacy_file = 'tl_products_internal_all.xlsx'
+legacy_file = st.file_uploader('Upload Crawl of LEGACY URLs', type='xlsx', key='legacy')
+
 
 input_files = []
 crawl_columns = ['Address', 'Title 1', 'H1-1', 'H2-1']
@@ -240,8 +228,7 @@ def export_dfs(match_dfs):
 if __name__ == '__main__':
     start_animation = False
     if legacy_file is not None:
-        # new_file = st.file_uploader('Upload Crawl of NEW URLs', type='xlsx', key='new')
-        new_file = 'circa_lighting_us_internal_html.xlsx'
+        new_file = st.file_uploader('Upload Crawl of NEW URLs', type='xlsx', key='new')
         if new_file is not None:
             crawl_files = [legacy_file, new_file]
             analyze_crawls(crawl_files)
