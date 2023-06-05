@@ -1,12 +1,33 @@
 import advertools as adv
 import pandas as pd
+import requests
 import streamlit as st
 from openpyxl import load_workbook
 from polyfuzz import PolyFuzz
 from polyfuzz.models import RapidFuzz
+from PIL import Image
+from streamlit_lottie import st_lottie
 
-matcher = RapidFuzz(n_jobs=1, score_cutoff=0.85)
+matcher = RapidFuzz(n_jobs=1, score_cutoff=0.80)
 model = PolyFuzz(matcher)
+
+
+def load_lottieurl(url):
+    r = requests.get(url)
+    if r.status_code != 200:
+        return None
+    return r.json()
+
+
+lottie_coding = load_lottieurl("https://assets3.lottiefiles.com/packages/lf20_jfXcHs2ED8.json")
+
+
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
 
 st.markdown("""
 <style>
@@ -17,7 +38,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("""
-<p class="big-font">SEO URL Redirect Mapper</p>
+<h1>SEO URL Redirect Mapper</h1>
 <b>Directions: </b>
 <ul>
 <li>Upload Legacy Crawl or URLs (xlsx)</li>
@@ -29,14 +50,14 @@ st.markdown("""
 <li>Column 1 to be named "Address" and contain full URLs, including http(s)://</li>
 <li>The following column headings need to exist in both files, even if column cells are blank:
  <ul>
- <li>"Title-1" "H1-1" "H2-1"</li>
+ <li>"Title 1" "H1-1" "H2-1"</li>
  </ul>
 
 </ul>
 """, unsafe_allow_html=True)
 
-legacy_file = st.file_uploader('Upload Crawl of LEGACY URLs', type='xlsx', key='legacy')
-# legacy_file = 'tl_products_internal_all.xlsx'
+# legacy_file = st.file_uploader('Upload Crawl of LEGACY URLs', type='xlsx', key='legacy')
+legacy_file = 'tl_products_internal_all.xlsx'
 
 input_files = []
 crawl_columns = ['Address', 'Title 1', 'H1-1', 'H2-1']
@@ -44,6 +65,8 @@ crawl_columns = ['Address', 'Title 1', 'H1-1', 'H2-1']
 
 def analyze_crawls(crawls):
     st.write('Reading site crawls. . .')
+    # while start_animation:
+    #     st_lottie(lottie_coding, height=200, key='running')
     for crawl in crawls:
         wb = load_workbook(filename=crawl)
         sheet_name = wb.sheetnames
@@ -60,9 +83,6 @@ def analyze_crawls(crawls):
     new_urls = new_crawl[new_col_1].tolist()
     st.write(legacy_crawl[legacy_col_1].head())
     st.write(new_crawl[new_col_1].head())
-
-    # st.write(list(legacy_crawl.columns))
-    # st.write(list(new_crawl.columns))
     url_parse(legacy_urls, legacy_crawl, new_urls, new_crawl)
 
 
@@ -73,7 +93,7 @@ def url_match(legacy_paths, new_paths, legacy_url_parse, new_url_parse):
     pfuzz_df = model.get_matches()
     pfuzz_df["Similarity"] = pfuzz_df["Similarity"].round(3)
     pfuzz_df = pfuzz_df.sort_values('Similarity', ascending=False)
-    pfuzz_df = pfuzz_df[pfuzz_df['Similarity'] >= .900]
+    pfuzz_df = pfuzz_df[pfuzz_df['Similarity'] >= .800]
     print(pfuzz_df.head())
 
     join_df = pd.merge(pfuzz_df, legacy_url_parse, left_on='From', right_on='path')
@@ -109,14 +129,16 @@ def slug_match(legacy_slugs, new_slugs, legacy_url_parse, new_url_parse):
     st.dataframe(slug_df)
     return slug_df
 
+
 def title_match(legacy_titles, new_titles, legacy_crawl, new_crawl):
+
     st.write('Analyzing Title tags. . .')
     model.match(legacy_titles, new_titles)
 
     pfuzz_df = model.get_matches()
     pfuzz_df["Similarity"] = pfuzz_df["Similarity"].round(3)
     pfuzz_df = pfuzz_df.sort_values('Similarity', ascending=False)
-    pfuzz_df = pfuzz_df[pfuzz_df['Similarity'] >= .900]
+    pfuzz_df = pfuzz_df[pfuzz_df['Similarity'] >= .700]
     print(pfuzz_df.head())
 
     join_df = pd.merge(pfuzz_df, legacy_crawl, left_on='From', right_on='Title 1')
@@ -195,9 +217,11 @@ def url_parse(legacy_urls, legacy_crawl, new_urls, new_crawl):
     ]
 
     export_dfs(match_dfs)
+    start_animation = False
 
 
 def export_dfs(match_dfs):
+
     sheet_names = ['URL Match', 'Slug Match', 'Title Match', 'H1 Match', 'H2 Match']
     with pd.ExcelWriter('mapped_urls.xlsx') as writer:
         for df in enumerate(match_dfs):
@@ -214,11 +238,14 @@ def export_dfs(match_dfs):
 
 
 if __name__ == '__main__':
+    start_animation = False
     if legacy_file is not None:
-        new_file = st.file_uploader('Upload Crawl of NEW URLs', type='xlsx', key='new')
-        # new_file = 'circa_lighting_us_internal_html.xlsx'
+        # new_file = st.file_uploader('Upload Crawl of NEW URLs', type='xlsx', key='new')
+        new_file = 'circa_lighting_us_internal_html.xlsx'
         if new_file is not None:
             crawl_files = [legacy_file, new_file]
             analyze_crawls(crawl_files)
 
+st.write('---')
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 st.write('Author: [Tyler Gargula](https://tylergargula.dev) | Technical SEO & Software Developer')
